@@ -7,10 +7,10 @@ from typing import Optional
 import click
 from pathlib import Path
 
-from trace.config import Config
-from trace.search_sourcegraph import SourcegraphSearcher
-from trace.search_afs import AFSSearcher
-from trace.summarize_impact import ImpactSummarizer
+from traceit.config import Config
+from traceit.search_gf import SourcegraphSearcher
+from traceit.search_afs import AFSSearcher
+from traceit.summarize_impact import ImpactSummarizer
 
 
 def setup_logging(config: Config):
@@ -113,9 +113,9 @@ def main(query: str, output_json: bool, generate_summary: bool, depth: Optional[
     """Trace file, job, or table usage across the organization.
     
     Examples:
-        trace file.py
-        trace job:daily_prices
-        trace table:analytics.pnl
+        traceit file.py
+        traceit job:daily_prices
+        traceit table:analytics.pnl
     """
     # Load configuration
     cfg = Config(config_path=config)

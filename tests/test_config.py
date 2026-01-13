@@ -4,7 +4,7 @@ import pytest
 import yaml
 import tempfile
 from pathlib import Path
-from trace.config import Config
+from traceit.config import Config
 
 
 def test_config_defaults():

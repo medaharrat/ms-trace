@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import Mock, patch
-from trace.search_sourcegraph import SourcegraphSearcher
+from traceit.search_gf import SourcegraphSearcher
 
 
 def test_sourcegraph_searcher_init():

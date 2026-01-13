@@ -3,7 +3,7 @@
 import pytest
 import tempfile
 from pathlib import Path
-from trace.search_afs import AFSSearcher
+from traceit.search_afs import AFSSearcher
 
 
 def test_afs_searcher_init():

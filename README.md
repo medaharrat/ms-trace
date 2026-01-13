@@ -1,4 +1,4 @@
-# Trace Tool
+# TraceIt
 
 A Python CLI tool that finds where files, jobs, or tables are used within your organization by searching code repositories (via Sourcegraph API) and file storage (AFS). Supports Kerberos SSO authentication and optional LLM-based impact summarization.
 
@@ -17,7 +17,7 @@ A Python CLI tool that finds where files, jobs, or tables are used within your o
 
 ```bash
 git clone <repository-url>
-cd ms-trace
+cd traceit
 pip install .
 ```
 
@@ -61,7 +61,7 @@ llm:
 
 The configuration file is searched in the following order:
 1. `config.yaml` in the current directory
-2. `~/.trace/config.yaml`
+2. `~/.traceit/config.yaml`
 
 ## Usage
 
@@ -69,13 +69,13 @@ The configuration file is searched in the following order:
 
 ```bash
 # Search for a file
-trace file.py
+traceit file.py
 
 # Search for a job
-trace job:daily_prices
+traceit job:daily_prices
 
 # Search for a table
-trace table:analytics.pnl
+traceit table:analytics.pnl
 ```
 
 ### Output formats
@@ -83,19 +83,19 @@ trace table:analytics.pnl
 **Human-readable summary (default):**
 
 ```bash
-trace file.py --summary
+traceit file.py --summary
 ```
 
 **JSON output:**
 
 ```bash
-trace file.py --json
+traceit file.py --json
 ```
 
 **Combined:**
 
 ```bash
-trace file.py --summary --json
+traceit file.py --summary --json
 ```
 
 ### Options
@@ -110,7 +110,7 @@ trace file.py --summary --json
 ### Example 1: Finding file usage
 
 ```bash
-$ trace pricing_engine.py
+$ traceit pricing_engine.py
 
 References for pricing_engine.py:
 
@@ -130,7 +130,7 @@ Impact summary:
 ### Example 2: JSON output with LLM summary
 
 ```bash
-$ trace job:daily_prices --json
+$ traceit job:daily_prices --json
 
 {
   "input": "job:daily_prices",
@@ -165,8 +165,8 @@ $ trace job:daily_prices --json
 
 The tool is organized into modular components:
 
-- `trace_cli.py`: CLI interface and argument parsing
-- `search_sourcegraph.py`: Sourcegraph API integration with Kerberos SSO
+- `cli.py`: CLI interface and argument parsing
+- `search_gf.py`: Sourcegraph API integration with Kerberos SSO
 - `search_afs.py`: AFS file system search with Kerberos authentication
 - `summarize_impact.py`: Optional LLM-based impact summarization
 - `config.py`: Configuration management
@@ -220,14 +220,15 @@ pytest tests/
 ### Code structure
 
 ```
-ms-trace/
-├── trace/              # Main package
-│   ├── __init__.py
-│   ├── trace_cli.py    # CLI interface
-│   ├── config.py       # Configuration
-│   ├── search_sourcegraph.py
-│   ├── search_afs.py
-│   └── summarize_impact.py
+traceit/
+├── src/
+│   └── traceit/        # Main package
+│       ├── __init__.py
+│       ├── cli.py      # CLI interface
+│       ├── config.py   # Configuration
+│       ├── search_gf.py
+│       ├── search_afs.py
+│       └── summarize_impact.py
 ├── tests/              # Unit tests
 ├── setup.py
 ├── requirements.txt
