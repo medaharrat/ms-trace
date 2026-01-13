@@ -1,0 +1,37 @@
+# Trace Tool Configuration
+
+# Sourcegraph API Configuration
+sourcegraph:
+  endpoint: "https://sourcegraph.example.com/.api/graphql"
+  # Kerberos authentication will be used automatically
+  # Optional: API token (if needed in addition to Kerberos)
+  # token: ""
+
+# AFS Storage Configuration
+afs:
+  root_path: "/afs/project"
+  # Search patterns (regex)
+  search_patterns:
+    - ".*\\.py$"
+    - ".*\\.sql$"
+    - ".*\\.ipynb$"
+
+# Optional LLM Configuration
+llm:
+  enabled: false
+  provider: "openai"  # or "anthropic", "local"
+  model: "gpt-4"
+  api_key: ""  # Set via environment variable LLM_API_KEY
+  base_url: ""  # Optional: for custom endpoints
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# Performance Configuration
+performance:
+  max_workers: 4  # For parallel Sourcegraph queries
+  request_timeout: 30  # seconds
+  max_retries: 3
+
