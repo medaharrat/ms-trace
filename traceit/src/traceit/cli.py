@@ -6,7 +6,6 @@ import sys
 from typing import Optional
 
 import click
-
 from traceit.config import Config
 from traceit.search_afs import AFSSearcher
 from traceit.search_gf import SourcegraphSearcher
@@ -124,15 +123,17 @@ def format_json(
     "--depth",
     type=int,
     default=None,
-    help="Limit search depth for cross-references (not yet implemented)",
+    help="Limit search depth for cross-references",
 )
 @click.option("--config", type=click.Path(exists=True), help="Path to config.yaml file")
+@click.option("--verbose", is_flag=True, help="Show all files analyzed (verbose mode)")
 def main(
     query: str,
     output_json: bool,
     generate_summary: bool,
     depth: Optional[int],
     config: Optional[str],
+    verbose: bool,
 ):
     """Trace file, job, or table usage across the organization.
 
@@ -159,6 +160,7 @@ def main(
     afs_searcher = AFSSearcher(
         root_path=cfg.get_afs_root_path(),
         search_patterns=cfg.get_afs_search_patterns(),
+        verbose=verbose,
     )
 
     # Perform searches
@@ -166,7 +168,7 @@ def main(
     code_refs = sourcegraph_searcher.search_references(query)
 
     logger.info("Searching AFS...")
-    afs_refs = afs_searcher.search(query)
+    afs_refs = afs_searcher.search(query, max_depth=depth if depth else 1)
 
     # Generate summary if requested or for human-readable output
     summary = None

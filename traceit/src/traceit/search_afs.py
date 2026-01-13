@@ -13,12 +13,13 @@ logger = logging.getLogger(__name__)
 class AFSSearcher:
     """Search for files in AFS storage."""
 
-    def __init__(self, root_path: str, search_patterns: Optional[List[str]] = None):
+    def __init__(self, root_path: str, search_patterns: Optional[List[str]] = None, verbose: bool = False):
         """Initialize AFS searcher.
 
         Args:
             root_path: Root path of AFS storage
             search_patterns: List of regex patterns to match files
+            verbose: Whether to print all files analyzed
         """
         self.root_path = Path(root_path)
         self.search_patterns = search_patterns or [
@@ -26,6 +27,7 @@ class AFSSearcher:
             ".*\\.sql$",
             ".*\\.ipynb$",
         ]
+        self.verbose = verbose
 
         # Compile regex patterns
         self.compiled_patterns = [
@@ -148,13 +150,25 @@ class AFSSearcher:
 
                 for file in files:
                     file_path = Path(root) / file
+                    if self.verbose:
+                        # Color: cyan for all files, green for matches
+                        CYAN = "\033[36m"
+                        GREEN = "\033[32m"
+                        RESET = "\033[0m"
+                        is_match = base_name.lower() in file.lower() and any(
+                            pattern.search(file) for pattern in self.compiled_patterns
+                        )
+                        color = GREEN if is_match else CYAN
+                        print(f"{color}Analyzed: {file_path}{RESET}")
                     if base_name.lower() in file.lower():
                         if any(
                             pattern.search(file) for pattern in self.compiled_patterns
                         ):
                             matching_files.append(file_path)
         except (OSError, PermissionError) as e:
-            logger.error(f"Error traversing AFS directory: {e}")
+            RED = "\033[31m"
+            RESET = "\033[0m"
+            logger.error(f"{RED}Error traversing AFS directory: {e}{RESET}")
 
         return matching_files
 
