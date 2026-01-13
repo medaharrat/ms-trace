@@ -32,50 +32,77 @@ class AFSSearcher:
             re.compile(pattern) for pattern in self.search_patterns
         ]
 
-    def search(self, query: str) -> List[Dict[str, Any]]:
+    def search(self, query: str, timeout: Optional[float] = None, max_depth: int = 1) -> List[Dict[str, Any]]:
         """Search for files matching the query in AFS.
 
         Args:
             query: Search query (file name, job name, table name)
+            timeout: Maximum time in seconds to allow for search (optional)
+            max_depth: Maximum directory depth for recursive search (default 1)
 
         Returns:
             List of file references with path and last_modified
         """
+        import queue
+        import threading
         references = []
+        result_queue = queue.Queue()
 
-        if not self.root_path.exists():
-            logger.warning(f"AFS root path does not exist: {self.root_path}")
-            return references
+        def _ping_afs_location(path: Path) -> bool:
+            # Try to list the directory to check if reachable
+            try:
+                if path.exists() and path.is_dir():
+                    # Try listing contents
+                    _ = next(path.iterdir(), None)
+                    return True
+                return False
+            except Exception as e:
+                logger.warning(f"Ping failed for AFS location {path}: {e}")
+                return False
 
+        def search_worker():
+            try:
+                if not _ping_afs_location(self.root_path):
+                    logger.warning(f"AFS root path is not reachable: {self.root_path}")
+                    result_queue.put([])
+                    return
+                base_name = self._extract_base_name(query)
+                matching_files = self._find_matching_files(base_name, max_depth=max_depth)
+                refs = []
+                for file_path in matching_files:
+                    try:
+                        stat_info = file_path.stat()
+                        last_modified = datetime.fromtimestamp(
+                            stat_info.st_mtime
+                        ).isoformat()
+                        refs.append(
+                            {
+                                "path": str(file_path),
+                                "last_modified": last_modified,
+                                "type": "afs",
+                            }
+                        )
+                    except (OSError, PermissionError) as e:
+                        logger.warning(f"Could not access file {file_path}: {e}")
+                        continue
+                result_queue.put(refs)
+            except Exception as e:
+                logger.error(f"Error searching AFS: {e}")
+                result_queue.put([])
+
+        import sys
         try:
-            # Extract base name from query
-            base_name = self._extract_base_name(query)
-
-            # Search for files matching the query
-            matching_files = self._find_matching_files(base_name)
-
-            for file_path in matching_files:
-                try:
-                    stat_info = file_path.stat()
-                    last_modified = datetime.fromtimestamp(
-                        stat_info.st_mtime
-                    ).isoformat()
-
-                    references.append(
-                        {
-                            "path": str(file_path),
-                            "last_modified": last_modified,
-                            "type": "afs",
-                        }
-                    )
-                except (OSError, PermissionError) as e:
-                    logger.warning(f"Could not access file {file_path}: {e}")
-                    continue
-
-        except Exception as e:
-            logger.error(f"Error searching AFS: {e}")
-
-        return references
+            t = threading.Thread(target=search_worker)
+            t.start()
+            t.join(timeout)
+            if t.is_alive():
+                logger.error(f"AFS search timed out after {timeout} seconds.")
+                return []
+            return result_queue.get()
+        except KeyboardInterrupt:
+            logger.warning("AFS search interrupted by user (SIGINT)")
+            # Optionally, clean up resources or stop thread if needed
+            sys.exit(1)
 
     def _extract_base_name(self, query: str) -> str:
         """Extract base name from query.
@@ -95,11 +122,12 @@ class AFSSearcher:
         else:
             return query
 
-    def _find_matching_files(self, base_name: str) -> List[Path]:
+    def _find_matching_files(self, base_name: str, max_depth: int = 1) -> List[Path]:
         """Find files matching the base name in AFS.
 
         Args:
             base_name: Base name to search for
+            max_depth: Maximum directory depth for recursive search
 
         Returns:
             List of matching file paths
@@ -107,17 +135,20 @@ class AFSSearcher:
         matching_files = []
 
         try:
-            # Use os.walk to traverse directory tree
+            # Use os.walk to traverse directory tree with depth control
+            root_depth = len(self.root_path.parts)
             for root, dirs, files in os.walk(self.root_path):
-                # Skip hidden directories
-                dirs[:] = [d for d in dirs if not d.startswith(".")]
+                current_depth = len(Path(root).parts) - root_depth
+                if current_depth >= max_depth:
+                    # Prevent descending further
+                    dirs[:] = []
+                else:
+                    # Skip hidden directories
+                    dirs[:] = [d for d in dirs if not d.startswith(".")]
 
                 for file in files:
                     file_path = Path(root) / file
-
-                    # Check if file name contains the base name
                     if base_name.lower() in file.lower():
-                        # Also check if it matches any of the search patterns
                         if any(
                             pattern.search(file) for pattern in self.compiled_patterns
                         ):
